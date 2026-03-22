@@ -19,4 +19,23 @@ This project allows users to explore quantum gates, state transformations, and c
 
 ## 🧠 Concept
 
-A single qubit can be represented as:
+A single qubit can be represented as: |ψ⟩ = α|0⟩ + β|1⟩
+
+
+This state maps to a point on the Bloch Sphere:
+
+- X = 2Re(αβ*)
+- Y = 2Im(αβ*)
+- Z = |α|² − |β|²
+
+The application visualizes this mapping and allows direct manipulation.
+
+---
+
+## 🛠 Tech Stack
+
+- **Frontend:** React (Vite)
+- **3D Rendering:** Three.js + React Three Fiber
+- **Math Handling:** Custom complex number logic
+
+---
