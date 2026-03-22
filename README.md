@@ -1,16 +1,22 @@
-# React + Vite
+# Bloch Sphere Visualizer
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+An interactive 3D visualization tool for representing a single-qubit quantum state on the Bloch sphere.  
+This project allows users to explore quantum gates, state transformations, and coordinate-based control in real time.
 
-Currently, two official plugins are available:
+---
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## 🚀 Features
 
-## React Compiler
+- 🔷 Interactive 3D Bloch Sphere (React + Three.js)
+- 🔷 Apply quantum gates: X, Y, Z, H
+- 🔷 Manual vector control (X, Y, Z inputs)
+- 🔷 Real-time state vector display
+- 🔷 Probability visualization for |0⟩ and |1⟩
+- 🔷 Gate history tracking
+- 🔷 Coordinate normalization (valid quantum state enforcement)
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+---
 
-## Expanding the ESLint configuration
+## 🧠 Concept
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+A single qubit can be represented as:
