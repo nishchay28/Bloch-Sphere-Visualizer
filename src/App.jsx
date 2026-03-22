@@ -1,12 +1,13 @@
 import { useState } from 'react'
 import { Canvas } from '@react-three/fiber'
-import { OrbitControls } from '@react-three/drei'
 import * as THREE from 'three'
+import { OrbitControls, Text } from '@react-three/drei'
 
 const styles = {
   container: {
     display: 'flex',
-    minHeight: '100vh',
+    height: '100vh',
+    alignItems: 'stretch',
     padding: '20px',
     gap: '20px',
   },
@@ -14,6 +15,9 @@ const styles = {
     background: '#16213e',
     borderRadius: '8px',
     padding: '20px',
+    height: '100%',
+    display: 'flex',
+    flexDirection: 'coloumn',
   },
   leftPanel: {
     width: '120px',
@@ -23,7 +27,7 @@ const styles = {
   },
   centerPanel: {
     flex: 1,
-    height: '80vh',   // IMPORTANT
+    height: '100%',   // IMPORTANT
     display: 'block', // remove flex centering
   },
   rightPanel: {
@@ -207,6 +211,19 @@ function BlochSphere({ coords }) {
       <line geometry={new THREE.BufferGeometry().setFromPoints(axisZ)}>
         <lineBasicMaterial color="blue" />
       </line>
+
+      <Text position={[1.3, 0, 0]} fontSize={0.1} color="red">
+        X
+      </Text>
+
+      <Text position={[0, 1.3, 0]} fontSize={0.1} color="green">
+        Y
+      </Text>
+
+      <Text position={[0, 0, 1.3]} fontSize={0.1} color="blue">
+        Z
+      </Text>
+
     </>
   )
 }
@@ -216,15 +233,27 @@ function App() {
   const [theta, setTheta] = useState(0)
   const [phi, setPhi] = useState(0)
 
-    const normalize = (v) => {
-    const x = Number(v.x) || 0
-    const y = Number(v.y) || 0
-    const z = Number(v.z) || 0
+  const normalize = (v) => {
+  const x = Number(v.x) || 0
+  const y = Number(v.y) || 0
+  const z = Number(v.z) || 0
 
-    const len = Math.sqrt(x*x + y*y + z*z)
-    if (!isFinite(len) || len === 0) return { x: 0, y: 0, z: 1 }
-
+  const len = Math.sqrt(x*x + y*y + z*z)
+  if (!isFinite(len) || len === 0) return { x: 0, y: 0, z: 1 }
     return { x: x/len, y: y/len, z: z/len }
+  }
+
+  const anglesToState = (t, p) => {
+    return {
+      alpha: {
+        re: Math.cos(t / 2),
+        im: 0,
+      },
+      beta: {
+        re: Math.cos(p) * Math.sin(t / 2),
+        im: Math.sin(p) * Math.sin(t / 2),
+      },
+    }
   }
 
   const coordsToAngles = (x, y, z) => {
@@ -244,6 +273,8 @@ function App() {
 
     const newCoords = anglesToCoords(t, p)
     setCoords(newCoords)
+    const newState = anglesToState(t, p)
+    setState(newState)
     setInputCoords(newCoords)
   }
 
@@ -348,122 +379,137 @@ function App() {
     <div style={styles.container}>
       {/* Left Panel - Gate Buttons */}
       <div style={{ ...styles.panel, ...styles.leftPanel }}>
-      <div style={styles.title}>Gates</div>
 
-      <div style={{ marginTop: '20px' }}>
-        <div style={styles.title}>Angles</div>
-
-        {/* Theta */}
-        <div style={{ marginBottom: '10px' }}>
-          <label style={{ fontSize: '12px' }}>
-            θ: {theta.toFixed(2)}
-          </label>
-          <input
-            type="range"
-            min={0}
-            max={Math.PI}
-            step={0.01}
-            value={theta}
-            onChange={(e) =>
-              updateFromAngles(parseFloat(e.target.value), phi)
-            }
-            style={{ width: '100%' }}
-          />
-        </div>
-
-        {/* Phi */}
+        {/* GATES SECTION */}
         <div>
-          <label style={{ fontSize: '12px' }}>
-            φ: {phi.toFixed(2)}
-          </label>
-          <input
-            type="range"
-            min={0}
-            max={2 * Math.PI}
-            step={0.01}
-            value={phi}
-            onChange={(e) =>
-              updateFromAngles(theta, parseFloat(e.target.value))
-            }
-            style={{ width: '100%' }}
-          />
-        </div>
-      </div>
+          <div style={styles.title}>Gates</div>
 
-      {['X', 'Y', 'Z', 'H'].map((gate) => (
-        <button
-          key={gate}
-          style={{
-            ...styles.button,
-            background: gateColors[gate],
-          }}
-          onClick={() => applyGate(gate)}
-          onMouseOver={(e) => (e.target.style.opacity = '0.8')}
-          onMouseOut={(e) => (e.target.style.opacity = '1')}
-        >
-          {gate}
-        </button>
-      ))}
-
-      {/* RESET BUTTON */}
-      <button
-        style={{
-          ...styles.button,
-          background: '#555',
-          marginTop: '20px',
-        }}
-        onClick={reset}
-      >
-        Reset
-      </button>
-
-      {/* MANUAL INPUT */}
-      <div style={{ marginTop: '20px' }}>
-        <div style={styles.title}>Manual Input</div>
-
-        {['x', 'y', 'z'].map((axis) => (
-          <div key={axis} style={{ marginBottom: '8px' }}>
-            <label style={{ fontSize: '12px' }}>{axis.toUpperCase()}</label>
-            <input
-              type="number"
-              step="0.1"
-              value={inputCoords[axis]}
-              onChange={(e) => {
-                const val = e.target.value
-
-                const newInput = {
-                  ...inputCoords,
-                  [axis]: val === '' ? '' : parseFloat(val),
-                }
-
-                setInputCoords(newInput)
-
-                // Only update coords if all fields are valid numbers
-                if (
-                  newInput.x !== '' &&
-                  newInput.y !== '' &&
-                  newInput.z !== ''
-                ) {
-                  const norm = normalize(newInput)
-                  setCoords(norm)
-
-                  const { theta: t, phi: p } = coordsToAngles(norm.x, norm.y, norm.z)
-                  setTheta(t)
-                  setPhi(p)
-                }
-              }}
+          {['X', 'Y', 'Z', 'H'].map((gate) => (
+            <button
+              key={gate}
               style={{
-                width: '100%',
-                padding: '6px',
-                marginTop: '2px',
-                borderRadius: '4px',
-                border: 'none',
+                ...styles.button,
+                background: gateColors[gate],
+                marginBottom: '8px',
               }}
+              onClick={() => applyGate(gate)}
+              onMouseOver={(e) => (e.target.style.opacity = '0.8')}
+              onMouseOut={(e) => (e.target.style.opacity = '1')}
+            >
+              {gate}
+            </button>
+          ))}
+        </div>
+
+        {/* ANGLES SECTION */}
+        <div style={{ marginTop: '20px' }}>
+          <div style={styles.title}>Angles</div>
+
+          {/* Theta */}
+          <div style={{ marginBottom: '10px' }}>
+            <label style={{ fontSize: '12px' }}>
+              θ: {theta.toFixed(2)}
+            </label>
+            <input
+              type="range"
+              min={0}
+              max={Math.PI}
+              step={0.01}
+              value={theta}
+              onChange={(e) =>
+                updateFromAngles(parseFloat(e.target.value), phi)
+              }
+              style={{ width: '100%' }}
             />
           </div>
-        ))}
+
+          {/* Phi */}
+          <div>
+            <label style={{ fontSize: '12px' }}>
+              φ: {phi.toFixed(2)}
+            </label>
+            <input
+              type="range"
+              min={0}
+              max={2 * Math.PI}
+              step={0.01}
+              value={phi}
+              onChange={(e) =>
+                updateFromAngles(theta, parseFloat(e.target.value))
+              }
+              style={{ width: '100%' }}
+            />
+          </div>
+        </div>
+
+        {/* RESET */}
+        <button
+          style={{
+            ...styles.button,
+            background: '#555',
+            marginTop: '20px',
+          }}
+          onClick={reset}
+        >
+          Reset
+        </button>
+
+        {/* MANUAL INPUT */}
+        <div style={{ marginTop: '20px' }}>
+          <div style={styles.title}>Manual Input</div>
+
+          {['x', 'y', 'z'].map((axis) => (
+            <div key={axis} style={{ marginBottom: '8px' }}>
+              <label style={{ fontSize: '12px' }}>
+                {axis.toUpperCase()}
+              </label>
+              <input
+                type="number"
+                step="0.1"
+                value={inputCoords[axis]}
+                onChange={(e) => {
+                  const val = e.target.value
+
+                  const newCoords = {
+                    ...inputCoords,
+                    [axis]: val === '' ? '' : parseFloat(val),
+                  }
+
+                  setInputCoords(newCoords)
+
+                  if (
+                    newCoords.x !== '' &&
+                    newCoords.y !== '' &&
+                    newCoords.z !== ''
+                  ) {
+                    const norm = normalize(newCoords)
+                    setCoords(norm)
+
+                    const { theta: t, phi: p } = coordsToAngles(
+                      norm.x,
+                      norm.y,
+                      norm.z
+                    )
+                    setTheta(t)
+                    setPhi(p)
+
+                    const newState = anglesToState(t, p)
+                    setState(newState)
+                  }
+                }}
+                style={{
+                  width: '100%',
+                  padding: '6px',
+                  marginTop: '2px',
+                  borderRadius: '4px',
+                  border: 'none',
+                }}
+              />
+            </div>
+          ))}
+        </div>
+
       </div>
-    </div>
 
       {/* Center Panel - 3D Canvas Placeholder */}
       <div style={{ ...styles.panel, ...styles.centerPanel }}>
