@@ -165,8 +165,8 @@ function BlochSphere({ coords }) {
         args={[
           new THREE.Vector3(
             coords.x,
-            coords.z,   // swap
-            coords.y    // swap
+            coords.y,   
+            coords.z    
           ).normalize(),
           new THREE.Vector3(0, 0, 0),
           1.00,
@@ -180,17 +180,17 @@ function BlochSphere({ coords }) {
       {/* Equator */}
       <mesh rotation={[Math.PI / 2, 0, 0]}>
         <ringGeometry args={[0.99, 1.01, 64]} />
-        <meshBasicMaterial color="#000000" side={THREE.DoubleSide} transparent opacity={0.5} />
+        <meshBasicMaterial color="#ffffff" side={THREE.DoubleSide} transparent opacity={0.5} />
       </mesh>
 
       <mesh rotation={[0, Math.PI / 2, 0]}>
         <ringGeometry args={[0.99, 1.01, 64]} />
-        <meshBasicMaterial color="#000000" side={THREE.DoubleSide} transparent opacity={0.5} />
+        <meshBasicMaterial color="#ffffff" side={THREE.DoubleSide} transparent opacity={0.5} />
       </mesh>
 
       <mesh rotation={[0, 0, Math.PI / 2]}>
         <ringGeometry args={[0.99, 1.01, 64]} />
-        <meshBasicMaterial color="#000000" side={THREE.DoubleSide} transparent opacity={0.5} />
+        <meshBasicMaterial color="#ffffff" side={THREE.DoubleSide} transparent opacity={0.5} />
       </mesh>
 
       {/* X Axis */}
@@ -213,6 +213,9 @@ function BlochSphere({ coords }) {
 
 function App() {
 
+  const [theta, setTheta] = useState(0)
+  const [phi, setPhi] = useState(0)
+
     const normalize = (v) => {
     const x = Number(v.x) || 0
     const y = Number(v.y) || 0
@@ -224,13 +227,42 @@ function App() {
     return { x: x/len, y: y/len, z: z/len }
   }
 
+  const coordsToAngles = (x, y, z) => {
+    const r = Math.sqrt(x*x + y*y + z*z)
+    if (r === 0) return { theta: 0, phi: 0 }
+
+    const theta = Math.acos(z / r)
+    let phi = Math.atan2(y, x)
+    if (phi < 0) phi += 2 * Math.PI
+
+    return { theta, phi }
+  }
+
+  const updateFromAngles = (t, p) => {
+    setTheta(t)
+    setPhi(p)
+
+    const newCoords = anglesToCoords(t, p)
+    setCoords(newCoords)
+    setInputCoords(newCoords)
+  }
+
   const [state, setState] = useState({
     alpha: { re: 1, im: 0 },
     beta: { re: 0, im: 0 },
   })
 
   const [coords, setCoords] = useState({ x: 0, y: 0, z: 1 })
+  const [inputCoords, setInputCoords] = useState({ x: 0, y: 0, z: 1 })
   const normalizedCoords = normalize(coords)
+
+  const anglesToCoords = (t, p) => {
+    return {
+      x: Math.sin(t) * Math.cos(p),
+      y: Math.sin(t) * Math.sin(p),
+      z: Math.cos(t),
+    }
+  }
 
   const [history, setHistory] = useState([])
 
@@ -277,6 +309,14 @@ function App() {
     const newY = 2 * (newAlpha.im * newBeta.re - newAlpha.re * newBeta.im)
     const newZ = newAlpha.re ** 2 + newAlpha.im ** 2 - newBeta.re ** 2 - newBeta.im ** 2
     setCoords({ x: newX, y: newY, z: newZ })
+    setInputCoords({
+      x: newX,
+      y: newY,
+      z: newZ,
+    })
+    const { theta: t, phi: p } = coordsToAngles(newX, newY, newZ)
+    setTheta(t)
+    setPhi(p)
 
     setHistory((prev) => [...prev, gate])
   }
@@ -284,6 +324,9 @@ function App() {
   const reset = () => {
     setState({ alpha: { re: 1, im: 0 }, beta: { re: 0, im: 0 } })
     setCoords({ x: 0, y: 0, z: 1 })
+    setInputCoords({ x: 0, y: 0, z: 1 })
+    setTheta(0)
+    setPhi(0)
     setHistory([])
   }
 
@@ -306,6 +349,46 @@ function App() {
       {/* Left Panel - Gate Buttons */}
       <div style={{ ...styles.panel, ...styles.leftPanel }}>
       <div style={styles.title}>Gates</div>
+
+      <div style={{ marginTop: '20px' }}>
+        <div style={styles.title}>Angles</div>
+
+        {/* Theta */}
+        <div style={{ marginBottom: '10px' }}>
+          <label style={{ fontSize: '12px' }}>
+            θ: {theta.toFixed(2)}
+          </label>
+          <input
+            type="range"
+            min={0}
+            max={Math.PI}
+            step={0.01}
+            value={theta}
+            onChange={(e) =>
+              updateFromAngles(parseFloat(e.target.value), phi)
+            }
+            style={{ width: '100%' }}
+          />
+        </div>
+
+        {/* Phi */}
+        <div>
+          <label style={{ fontSize: '12px' }}>
+            φ: {phi.toFixed(2)}
+          </label>
+          <input
+            type="range"
+            min={0}
+            max={2 * Math.PI}
+            step={0.01}
+            value={phi}
+            onChange={(e) =>
+              updateFromAngles(theta, parseFloat(e.target.value))
+            }
+            style={{ width: '100%' }}
+          />
+        </div>
+      </div>
 
       {['X', 'Y', 'Z', 'H'].map((gate) => (
         <button
@@ -344,13 +427,30 @@ function App() {
             <input
               type="number"
               step="0.1"
-              value={coords[axis]}
+              value={inputCoords[axis]}
               onChange={(e) => {
                 const val = e.target.value
-                setCoords((prev) => ({
-                  ...prev,
-                  [axis]: val === '' ? 0 : parseFloat(val),
-                }))
+
+                const newInput = {
+                  ...inputCoords,
+                  [axis]: val === '' ? '' : parseFloat(val),
+                }
+
+                setInputCoords(newInput)
+
+                // Only update coords if all fields are valid numbers
+                if (
+                  newInput.x !== '' &&
+                  newInput.y !== '' &&
+                  newInput.z !== ''
+                ) {
+                  const norm = normalize(newInput)
+                  setCoords(norm)
+
+                  const { theta: t, phi: p } = coordsToAngles(norm.x, norm.y, norm.z)
+                  setTheta(t)
+                  setPhi(p)
+                }
               }}
               style={{
                 width: '100%',
